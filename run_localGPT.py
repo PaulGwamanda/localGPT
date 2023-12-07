@@ -2,6 +2,7 @@ import os
 import logging
 import click
 import torch
+import utils
 from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceInstructEmbeddings
 from langchain.llms import HuggingFacePipeline
@@ -20,6 +21,7 @@ from transformers import (
 )
 
 from load_models import (
+    load_quantized_model_awq,
     load_quantized_model_gguf_ggml,
     load_quantized_model_qptq,
     load_full_model,
@@ -63,6 +65,8 @@ def load_model(device_type, model_id, model_basename=None, LOGGING=logging):
             return llm
         elif ".ggml" in model_basename.lower():
             model, tokenizer = load_quantized_model_gguf_ggml(model_id, model_basename, device_type, LOGGING)
+        elif ".awq" in model_basename.lower():
+            model, tokenizer = load_quantized_model_awq(model_id, LOGGING)
         else:
             model, tokenizer = load_quantized_model_qptq(model_id, model_basename, device_type, LOGGING)
     else:
@@ -207,7 +211,13 @@ def retrieval_qa_pipline(device_type, use_history, promptTemplate_type="llama"):
     ),
     help="model type, llama, mistral or non_llama",
 )
-def main(device_type, show_sources, use_history, model_type):
+@click.option(
+    "--save_qa",
+    is_flag=True,
+    help="whether to save Q&A pairs to a CSV file (Default is False)",
+)
+
+def main(device_type, show_sources, use_history, model_type, save_qa):
     """
     Implements the main information retrieval task for a localGPT.
 
@@ -259,6 +269,10 @@ def main(device_type, show_sources, use_history, model_type):
                 print("\n> " + document.metadata["source"] + ":")
                 print(document.page_content)
             print("----------------------------------SOURCE DOCUMENTS---------------------------")
+        
+        # Log the Q&A to CSV only if save_qa is True
+        if save_qa:
+            utils.log_to_csv(query, answer)
 
 
 if __name__ == "__main__":

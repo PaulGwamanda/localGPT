@@ -141,11 +141,41 @@ def load_full_model(model_id, model_basename, device_type, logging):
             torch_dtype=torch.float16,
             low_cpu_mem_usage=True,
             cache_dir=MODELS_PATH,
-            # trust_remote_code=True, # set these if you are using NVIDIA GPU
-            # load_in_4bit=True,
-            # bnb_4bit_quant_type="nf4",
-            # bnb_4bit_compute_dtype=torch.float16,
-            # max_memory={0: "15GB"} # Uncomment this line with you encounter CUDA out of memory errors
+            trust_remote_code=True, # set these if you are using NVIDIA GPU
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+            max_memory={0: "15GB"} # Uncomment this line with you encounter CUDA out of memory errors
         )
         model.tie_weights()
+    return model, tokenizer
+
+def load_quantized_model_awq(model_id, logging):
+    """
+    Load a AWQ quantized model using AutoModelForCausalLM.
+
+    This function loads a quantized model that ends with AWQ.
+
+    Parameters:
+    - model_id (str): The identifier for the model on HuggingFace Hub.
+    - logging (logging.Logger): Logger instance for logging messages.
+
+    Returns:
+    - model (AutoModelForCausalLM): The loaded quantized model.
+    - tokenizer (AutoTokenizer): The tokenizer associated with the model.
+
+    """
+
+    # The code supports all huggingface models that ends with AWQ.
+    logging.info("Using AutoModelForCausalLM for AWQ quantized models")
+
+    tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
+    logging.info("Tokenizer loaded")
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        use_safetensors=True,
+        trust_remote_code=True,
+        device_map="auto",
+    )
     return model, tokenizer
